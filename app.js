@@ -73,18 +73,18 @@ app.get("/", checkSignIn, (req, res) => {
     res.render("home.ejs", { user: user.firstName });
   });
 });
-
+app.get("/profile", (req, res) => {
+  console.log("nice");
+  User.findOne({ email: req.session.user }, (err, user) => {
+    res.render("profile.ejs", { user: user.firstName });
+  });
+});
 app.get("*", checkSignIn, function (req, res) {
   User.findOne({ email: req.session.user }, (err, user) => {
     res.redirect("/");
   });
 });
 
-app.get("/profile", (req, res) => {
-  User.findOne({ email: req.session.user }, (err, user) => {
-    res.render("profile.ejs", { user: user.firstName });
-  });
-});
 // APP.POSTS --------------------------------
 
 // SignUp
