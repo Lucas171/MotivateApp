@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+  <%- include('head'); %>
+  <body>
+    <%- include('nav'); %>
+    <div class="container">
+      <h1>Welcome <%= user %>!</h1>
+
+      <div class="card mt-3">
+        <div class="card-header">
+          <ul class="nav nav-tabs card-header-tabs">
+            <li class="nav-item">
+              <a class="nav-link active" href="#"
+                >Post Something Motivational</a
+              >
+            </li>
+          </ul>
+        </div>
+        <div class="card-body">
+          <form action="">
+            <div class="form-group">
+              <textarea
+                class="form-control"
+                id="exampleFormControlTextarea1"
+                rows="5"
+              ></textarea>
+
+              <button type="submit" class="btn btn-primary mt-3">Post</button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <h3 class="text-center mt-5 mb-5">Motivational Feed</h3>
+      <div class="card mt-3">
+        <h5 class="card-header">Lucas Miller</h5>
+        <div class="card-body">
+          <p class="card-text">
+            With supporting text below as a natural lead-in to additional
+            content.
+          </p>
+          <form class="d-inline" method="POST" action="/settings">
+            <button type="submit" class="btn btn-primary">View Profile</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <%- include('footer'); %>
+  </body>
+</html>
