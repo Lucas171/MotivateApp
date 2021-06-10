@@ -46,6 +46,16 @@ app.use(bodyParser.json());
 
 app.use(express.static("public"));
 
+app.use("/user/:id", function (req, res, next) {
+  User.findOne({ _id: req.params.id }, (err, user) => {
+    if (user) {
+      res.json(user);
+    }
+  });
+  //   console.log("Request Id:", );
+  //   next();
+});
+
 // FUNCTIONS --------------------------------
 
 function checkSignIn(req, res, next) {
@@ -70,6 +80,11 @@ app.get("*", checkSignIn, function (req, res) {
   });
 });
 
+app.get("/profile", (req, res) => {
+  User.findOne({ email: req.session.user }, (err, user) => {
+    res.render("profile.ejs", { user: user.firstName });
+  });
+});
 // APP.POSTS --------------------------------
 
 // SignUp
