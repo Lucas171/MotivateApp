@@ -20,6 +20,7 @@ mongoose
   })
   .catch((err) => console.log(err));
 
+mongoose.set("useFindAndModify", false);
 // Schemas
 
 const userSchema = new Schema({
@@ -27,8 +28,8 @@ const userSchema = new Schema({
   lastName: String,
   email: String,
   password: String,
-  publicPosts: Array,
-  privatePosts: Array,
+  publicPosts: [String],
+  privatePosts: [String],
 });
 
 const User = mongoose.model("User", userSchema);
@@ -73,11 +74,25 @@ app.get("/", checkSignIn, (req, res) => {
     res.render("home.ejs", { user: user.firstName });
   });
 });
-app.get("/profile", (req, res) => {
+app.get("/settings", checkSignIn, (req, res) => {
   console.log("nice");
   User.findOne({ email: req.session.user }, (err, user) => {
-    res.render("profile.ejs", { user: user.firstName });
+    if (err) {
+      console.log(err);
+    } else {
+      res.render("settings.ejs", {
+        user: user.firstName,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        message: null,
+      });
+    }
   });
+});
+
+app.get("/profile", (req, res) => {
+  res.render("profile.ejs");
 });
 app.get("*", checkSignIn, function (req, res) {
   User.findOne({ email: req.session.user }, (err, user) => {
@@ -99,10 +114,12 @@ app.post("/signUp", (req, res) => {
           lastName: req.body.lName,
           email: req.body.email,
           password: req.body.password,
+          privatePosts: [""],
+          publicPosts: [""],
         });
 
         user.save();
-
+        req.session.user = user.email;
         res.render("home.ejs", { user: user.firstName });
       } else {
         res.render("index.ejs", {
@@ -151,6 +168,109 @@ app.post("/logout", (req, res) => {
   res.render("index.ejs", { message: "You've logged out. Come back soon!" });
 });
 
+app.post("/changePassword", checkSignIn, (req, res) => {
+  User.findOne({ email: req.session.user }, (err, user) => {
+    if (err) {
+      console.log(err);
+      res.redirect("/");
+    } else if (req.body.currentPassword == user.password) {
+      if (req.body.newPassword == req.body.reNewPassword) {
+        User.updateOne(
+          { email: req.session.user },
+          { password: req.body.newPassword },
+          (err) => {
+            if (err) {
+              console.log(err);
+            }
+          }
+        );
+        res.render("settings.ejs", {
+          user: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          message: "Password has been successfully changed!",
+        });
+      } else {
+        res.render("settings.ejs", {
+          user: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          message: "Passwords do not match!",
+        });
+      }
+    }
+  });
+});
+
+app.post("/saveSettings", checkSignIn, (req, res) => {
+  User.findOneAndUpdate(
+    { email: req.session.user },
+    { firstName: req.body.firstName, lastName: req.body.lastName },
+    {
+      returnOriginal: false,
+    },
+    (err, user) => {
+      if (err) {
+        console.log(err);
+        res.render("settings.ejs", {
+          user: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          message: "There was an error please try again.",
+        });
+      } else {
+        res.render("settings.ejs", {
+          user: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          message: "Settings have been updated!",
+        });
+      }
+    }
+  );
+});
+
+app.post("/post", checkSignIn, (req, res) => {
+  if (req.body.privacy == undefined) {
+    User.findOneAndUpdate(
+      { email: req.session.user },
+      { $push: { publicPosts: req.body.post } },
+      {
+        returnOriginal: false,
+      },
+      (err, user) => {
+        if (err) {
+          console.log(err + "no error");
+        } else {
+          console.log(user);
+        }
+      }
+    );
+    console.log("ok");
+    res.redirect("/");
+  } else {
+    User.findOneAndUpdate(
+      { email: req.session.user },
+      { $push: { privatePosts: req.body.post } },
+      {
+        returnOriginal: false,
+      },
+      (err, user) => {
+        if (err) {
+          console.log(err + "no error");
+        } else {
+          console.log(user);
+        }
+      }
+    );
+    console.log("ok");
+    res.redirect("/");
+  }
+});
 app.listen("3000", () => {
   console.log("ALL GOOD!");
 });

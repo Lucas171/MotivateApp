@@ -17,14 +17,25 @@
           </ul>
         </div>
         <div class="card-body">
-          <form action="">
+          <form action="/post" method="POST">
             <div class="form-group">
               <textarea
                 class="form-control"
                 id="exampleFormControlTextarea1"
                 rows="5"
+                name="post"
               ></textarea>
-
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="flexSwitchCheckDefault"
+                  name="privacy"
+                />
+                <label class="form-check-label" for="flexSwitchCheckDefault"
+                  >Check to make your post private</label
+                >
+              </div>
               <button type="submit" class="btn btn-primary mt-3">Post</button>
             </div>
           </form>
