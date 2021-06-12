@@ -27,3 +27,9 @@ function hideSave() {
     }
   }
 }
+
+function reload() {
+  setTimeout(() => {
+    location.reload();
+  }, 10000);
+}

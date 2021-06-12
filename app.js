@@ -4,7 +4,9 @@ const mongoose = require("mongoose");
 const { Schema } = mongoose;
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
+const { reset } = require("nodemon");
 const app = express();
+const router = express.Router();
 // app.engine("html", require("ejs").renderFile);
 app.set("view engine", "ejs");
 // mongoDB FZuoBWTPICSUgPdJ
@@ -28,11 +30,21 @@ const userSchema = new Schema({
   lastName: String,
   email: String,
   password: String,
-  publicPosts: [String],
-  privatePosts: [String],
+  publicPosts: [{ post: String }],
+  privatePosts: [{ post: String }],
 });
 
 const User = mongoose.model("User", userSchema);
+
+const postSchema = new Schema({
+  _id: String,
+  author: String,
+  firstName: String,
+  lastName: String,
+  post: String,
+});
+
+const Post = mongoose.model("Post", postSchema);
 
 // APP.USE ------------------
 app.use(cookieParser());
@@ -47,14 +59,20 @@ app.use(bodyParser.json());
 
 app.use(express.static("public"));
 
-app.use("/user/:id", function (req, res, next) {
-  User.findOne({ _id: req.params.id }, (err, user) => {
-    if (user) {
-      res.json(user);
+app.get("/user/:id", checkSignIn, (req, res, next) => {
+  User.findOne({ email: req.params.id }, (err, user) => {
+    if (req.params.id == req.session.user) {
+      res.redirect("/profile");
+    } else if (user != req.session.user) {
+      res.render("othersProfile.ejs", {
+        user: user.firstName,
+        posts: user.publicPosts,
+        mainUser: user,
+      });
+    } else if (err) {
+      console.log(err);
     }
   });
-  //   console.log("Request Id:", );
-  //   next();
 });
 
 // FUNCTIONS --------------------------------
@@ -69,9 +87,22 @@ function checkSignIn(req, res, next) {
 
 // APP.GETS ---------------------------------
 app.get("/", checkSignIn, (req, res) => {
+  let userName;
   //   console.log("Session Active" + req.session.user);
   User.findOne({ email: req.session.user }, (err, user) => {
-    res.render("home.ejs", { user: user.firstName });
+    userName = user.firstName;
+  });
+
+  Post.find({}, (err, posts) => {
+    if (err) {
+      console.log(err);
+    } else {
+      res.render("home.ejs", {
+        user: userName,
+        posts: posts,
+        sessionUser: req.session.user,
+      });
+    }
   });
 });
 app.get("/settings", checkSignIn, (req, res) => {
@@ -91,9 +122,21 @@ app.get("/settings", checkSignIn, (req, res) => {
   });
 });
 
-app.get("/profile", (req, res) => {
-  res.render("profile.ejs");
+app.get("/profile", checkSignIn, (req, res) => {
+  User.findOne({ email: req.session.user }, (err, user) => {
+    res.render("profile.ejs", {
+      user: user.firstName,
+      posts: user.publicPosts,
+      mainUser: user,
+      privatePosts: user.privatePosts,
+    });
+  });
 });
+
+// app.get("/othersProfile", (req, res) => {
+//   console.log(userProfile);
+// });
+
 app.get("*", checkSignIn, function (req, res) {
   User.findOne({ email: req.session.user }, (err, user) => {
     res.redirect("/");
@@ -114,13 +157,13 @@ app.post("/signUp", (req, res) => {
           lastName: req.body.lName,
           email: req.body.email,
           password: req.body.password,
-          privatePosts: [""],
-          publicPosts: [""],
+          privatePosts: [],
+          publicPosts: [],
         });
 
         user.save();
         req.session.user = user.email;
-        res.render("home.ejs", { user: user.firstName });
+        res.redirect("/");
       } else {
         res.render("index.ejs", {
           message: "Your passwords didn't match, please try again.",
@@ -149,7 +192,7 @@ app.post("/login", (req, res) => {
     } else if (user) {
       if (req.body.password == user.password) {
         req.session.user = user.email;
-        res.render("home.ejs", { user: user.firstName });
+        res.redirect("/");
       } else {
         res.render("index.ejs", {
           message: "Password is incorrect. Try again",
@@ -238,7 +281,7 @@ app.post("/post", checkSignIn, (req, res) => {
   if (req.body.privacy == undefined) {
     User.findOneAndUpdate(
       { email: req.session.user },
-      { $push: { publicPosts: req.body.post } },
+      { $push: { publicPosts: { post: req.body.post } } },
       {
         returnOriginal: false,
       },
@@ -246,16 +289,33 @@ app.post("/post", checkSignIn, (req, res) => {
         if (err) {
           console.log(err + "no error");
         } else {
-          console.log(user);
+          let publicPosts = user.publicPosts;
+          // console.log(user.publicPosts[publicPosts.length - 1]._id);
+          Post.create(
+            {
+              _id: user.publicPosts[publicPosts.length - 1]._id,
+              author: user.email,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              post: req.body.post,
+            },
+            (err) => {
+              if (err) {
+                console.log(err);
+              } else {
+                setTimeout(() => {
+                  res.redirect("/");
+                }, 1000);
+              }
+            }
+          );
         }
       }
     );
-    console.log("ok");
-    res.redirect("/");
   } else {
     User.findOneAndUpdate(
       { email: req.session.user },
-      { $push: { privatePosts: req.body.post } },
+      { $push: { privatePosts: { post: req.body.post } } },
       {
         returnOriginal: false,
       },
@@ -267,9 +327,72 @@ app.post("/post", checkSignIn, (req, res) => {
         }
       }
     );
-    console.log("ok");
+
     res.redirect("/");
   }
+});
+
+app.post("/deletePublicPost", checkSignIn, (req, res) => {
+  if (req.body.postId) {
+    User.findOneAndUpdate(
+      { email: req.session.user },
+      { $pull: { publicPosts: { _id: req.body.postId } } },
+      { returnOriginal: false },
+      (err, user) => {
+        if (err) {
+          console.log(err);
+        } else {
+          Post.deleteOne({ _id: req.body.postId }, (err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              setTimeout(() => {
+                res.redirect("/profile");
+              }, 1000);
+            }
+          });
+        }
+      }
+    );
+  } else if (req.body.homePostId) {
+    User.findOneAndUpdate(
+      { email: req.session.user },
+      { $pull: { publicPosts: { _id: req.body.homePostId } } },
+      { returnOriginal: false },
+      (err, user) => {
+        if (err) {
+          console.log(err);
+        } else {
+          Post.deleteOne({ _id: req.body.homePostId }, (err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              setTimeout(() => {
+                res.redirect("/");
+              }, 1000);
+            }
+          });
+        }
+      }
+    );
+  }
+});
+
+app.post("/deletePrivatePost", checkSignIn, (req, res) => {
+  User.findOneAndUpdate(
+    { email: req.session.user },
+    { $pull: { privatePosts: { _id: req.body.postId } } },
+    { returnOriginal: false },
+    (err, user) => {
+      if (err) {
+        console.log(err);
+      } else {
+        setTimeout(() => {
+          res.redirect("/profile");
+        }, 1000);
+      }
+    }
+  );
 });
 app.listen("3000", () => {
   console.log("ALL GOOD!");

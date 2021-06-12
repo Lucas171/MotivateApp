@@ -2,6 +2,7 @@
 <html lang="en">
   <%- include('head'); %>
   <body>
+    <script></script>
     <%- include('nav'); %>
     <div class="container">
       <h1 class="mt-5">Welcome <%= user %>!</h1>
@@ -24,6 +25,7 @@
                 id="exampleFormControlTextarea1"
                 rows="5"
                 name="post"
+                required
               ></textarea>
               <div class="form-check form-switch">
                 <input
@@ -43,18 +45,55 @@
       </div>
 
       <h3 class="text-center mt-5 mb-5">Motivational Feed</h3>
+
+      <!--  -->
+      <% for (var i = 0; i < posts.length; i++) { %> <% if(posts[i].author ==
+      sessionUser){ %>
       <div class="card mt-3">
-        <h5 class="card-header">Lucas Miller</h5>
+        <h5 class="card-header">
+          <%= posts[i].firstName %> <%= posts[i].lastName %>
+        </h5>
         <div class="card-body">
-          <p class="card-text">
-            With supporting text below as a natural lead-in to additional
-            content.
-          </p>
-          <form class="d-inline" method="POST" action="/settings">
+          <p class="card-text"><%= posts[i].post %></p>
+          <form
+            class="d-inline"
+            method="GET"
+            action="/user/<%= posts[i].author %>"
+          >
+            <button type="submit" class="btn btn-primary">View Profile</button>
+          </form>
+
+          <form class="d-inline" method="POST" action="/deletePublicPost %>">
+            <button
+              type="submit"
+              name="homePostId"
+              value="<%= posts[i]._id %>"
+              class="btn btn-danger"
+            >
+              Delete Post
+            </button>
+          </form>
+        </div>
+      </div>
+      <% } else { %>
+      <div class="card mt-3">
+        <h5 class="card-header">
+          <%= posts[i].firstName %> <%= posts[i].lastName %>
+        </h5>
+        <div class="card-body">
+          <p class="card-text"><%= posts[i].post %></p>
+          <form
+            class="d-inline"
+            method="GET"
+            action="/user/<%= posts[i].author %>"
+          >
             <button type="submit" class="btn btn-primary">View Profile</button>
           </form>
         </div>
       </div>
+      <% } %><% } %>
+
+      <!--  -->
     </div>
     <%- include('footer'); %>
   </body>
