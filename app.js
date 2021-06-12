@@ -5,6 +5,8 @@ const { Schema } = mongoose;
 const session = require("express-session");
 const cookieParser = require("cookie-parser");
 const { reset } = require("nodemon");
+const bcrypt = require("bcrypt");
+const saltRounds = 10;
 const app = express();
 const router = express.Router();
 // app.engine("html", require("ejs").renderFile);
@@ -150,19 +152,21 @@ app.post("/signUp", (req, res) => {
   User.findOne({ email: req.body.email }, (err, user) => {
     if (user == null) {
       if (req.body.password == req.body.repassword) {
-        // if no user is found check passwords make sure they are the same if they are then create a new user
-        const user = new User({
-          firstName: req.body.fName,
-          lastName: req.body.lName,
-          email: req.body.email,
-          password: req.body.password,
-          privatePosts: [],
-          publicPosts: [],
-        });
+        bcrypt.hash(req.body.password, saltRounds, function (err, hash) {
+          const user = new User({
+            firstName: req.body.fName,
+            lastName: req.body.lName,
+            email: req.body.email,
+            password: hash,
+            privatePosts: [],
+            publicPosts: [],
+          });
 
-        user.save();
-        req.session.user = user.email;
-        res.redirect("/");
+          user.save();
+          req.session.user = user.email;
+          res.redirect("/");
+        });
+        // if no user is found check passwords make sure they are the same if they are then create a new user
       } else {
         res.render("index.ejs", {
           message: "Your passwords didn't match, please try again.",
@@ -189,14 +193,16 @@ app.post("/login", (req, res) => {
         message: "Doesn't look like you have an account! :( Please sign up.",
       });
     } else if (user) {
-      if (req.body.password == user.password) {
-        req.session.user = user.email;
-        res.redirect("/");
-      } else {
-        res.render("index.ejs", {
-          message: "Password is incorrect. Try again",
-        });
-      }
+      bcrypt.compare(req.body.password, user.password, function (err, result) {
+        if (result == true) {
+          req.session.user = user.email;
+          res.redirect("/");
+        } else {
+          res.render("index.ejs", {
+            message: "Password is incorrect. Try again",
+          });
+        }
+      });
     } else {
       console.log(err);
     }
@@ -213,33 +219,42 @@ app.post("/changePassword", checkSignIn, (req, res) => {
     if (err) {
       console.log(err);
       res.redirect("/");
-    } else if (req.body.currentPassword == user.password) {
-      if (req.body.newPassword == req.body.reNewPassword) {
-        User.updateOne(
-          { email: req.session.user },
-          { password: req.body.newPassword },
-          (err) => {
-            if (err) {
-              console.log(err);
-            }
+    } else if (user) {
+      bcrypt.compare(
+        req.body.currentPassword,
+        user.password,
+        function (err, result) {
+          if (result) {
+            bcrypt.hash(req.body.newPassword, saltRounds, function (err, hash) {
+              User.updateOne(
+                { email: req.session.user },
+                { password: hash },
+                (err) => {
+                  if (err) {
+                    console.log(err);
+                  }
+                }
+              );
+            });
+
+            res.render("settings.ejs", {
+              user: user.firstName,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              message: "Password has been successfully changed!",
+            });
+          } else {
+            res.render("settings.ejs", {
+              user: user.firstName,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              message: "Passwords do not match!",
+            });
           }
-        );
-        res.render("settings.ejs", {
-          user: user.firstName,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          message: "Password has been successfully changed!",
-        });
-      } else {
-        res.render("settings.ejs", {
-          user: user.firstName,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          message: "Passwords do not match!",
-        });
-      }
+        }
+      );
     }
   });
 });
@@ -395,39 +410,46 @@ app.post("/deletePrivatePost", checkSignIn, (req, res) => {
 app.post("/deleteAccount", checkSignIn, (req, res) => {
   User.findOne({ email: req.session.user }, (err, user) => {
     if (user) {
-      if (req.body.currentPassword == user.password) {
-        User.deleteOne(
-          { email: req.session.user },
-          { returnOriginal: false },
-          (err) => {
-            if (err) {
-              console.log(err);
-            } else {
-              Post.remove(
-                { author: req.session.user },
-                { returnOriginal: false },
-                (err) => {
-                  if (err) {
-                    console.log(err);
-                  } else {
-                    res.render("index.ejs", {
-                      message: "You have deleted your account successfully!",
-                    });
-                  }
+      bcrypt.compare(
+        req.body.currentPassword,
+        user.password,
+        function (err, result) {
+          if (result) {
+            User.deleteOne(
+              { email: req.session.user },
+              { returnOriginal: false },
+              (err) => {
+                if (err) {
+                  console.log(err);
+                } else {
+                  Post.remove(
+                    { author: req.session.user },
+                    { returnOriginal: false },
+                    (err) => {
+                      if (err) {
+                        console.log(err);
+                      } else {
+                        res.render("index.ejs", {
+                          message:
+                            "You have deleted your account successfully!",
+                        });
+                      }
+                    }
+                  );
                 }
-              );
-            }
+              }
+            );
+          } else {
+            res.render("settings.ejs", {
+              user: user.firstName,
+              firstName: user.firstName,
+              lastName: user.lastName,
+              email: user.email,
+              message: "Password is incorrect",
+            });
           }
-        );
-      } else {
-        res.render("settings.ejs", {
-          user: user.firstName,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          message: "Password is incorrect",
-        });
-      }
+        }
+      );
     }
   });
 });
