@@ -89,20 +89,18 @@ function checkSignIn(req, res, next) {
 
 // APP.GETS ---------------------------------
 app.get("/", checkSignIn, (req, res) => {
-  let userName;
-  //   console.log("Session Active" + req.session.user);
   User.findOne({ email: req.session.user }, (err, user) => {
-    userName = user.firstName;
-  });
-
-  Post.find({}, (err, posts) => {
-    if (err) {
-      console.log(err);
-    } else {
-      res.render("home.ejs", {
-        user: userName,
-        posts: posts,
-        sessionUser: req.session.user,
+    if (user) {
+      Post.find({}, (err, posts) => {
+        if (err) {
+          console.log(err);
+        } else {
+          res.render("home.ejs", {
+            user: user.firstName,
+            posts: posts,
+            sessionUser: req.session.user,
+          });
+        }
       });
     }
   });
