@@ -48,7 +48,9 @@ const Post = mongoose.model("Post", postSchema);
 
 // APP.USE ------------------
 app.use(cookieParser());
-app.use(session({ secret: "SecretKey!" }));
+app.use(
+  session({ secret: "SecretKey!", resave: true, saveUninitialized: true })
+);
 app.use(
   bodyParser.urlencoded({
     extended: true,
@@ -106,7 +108,6 @@ app.get("/", checkSignIn, (req, res) => {
   });
 });
 app.get("/settings", checkSignIn, (req, res) => {
-  console.log("nice");
   User.findOne({ email: req.session.user }, (err, user) => {
     if (err) {
       console.log(err);
@@ -205,9 +206,7 @@ app.post("/login", (req, res) => {
 });
 
 app.post("/logout", (req, res) => {
-  req.session.destroy(function () {
-    console.log("user logged out.");
-  });
+  req.session.destroy(function () {});
   res.render("index.ejs", { message: "You've logged out. Come back soon!" });
 });
 
@@ -287,7 +286,7 @@ app.post("/post", checkSignIn, (req, res) => {
       },
       (err, user) => {
         if (err) {
-          console.log(err + "no error");
+          console.log(err);
         } else {
           let publicPosts = user.publicPosts;
           // console.log(user.publicPosts[publicPosts.length - 1]._id);
@@ -434,6 +433,4 @@ app.post("/deleteAccount", checkSignIn, (req, res) => {
     }
   });
 });
-app.listen("3000", () => {
-  console.log("ALL GOOD!");
-});
+app.listen("3000", () => {});
