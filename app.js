@@ -394,6 +394,46 @@ app.post("/deletePrivatePost", checkSignIn, (req, res) => {
     }
   );
 });
+
+app.post("/deleteAccount", checkSignIn, (req, res) => {
+  User.findOne({ email: req.session.user }, (err, user) => {
+    if (user) {
+      if (req.body.currentPassword == user.password) {
+        User.deleteOne(
+          { email: req.session.user },
+          { returnOriginal: false },
+          (err) => {
+            if (err) {
+              console.log(err);
+            } else {
+              Post.remove(
+                { author: req.session.user },
+                { returnOriginal: false },
+                (err) => {
+                  if (err) {
+                    console.log(err);
+                  } else {
+                    res.render("index.ejs", {
+                      message: "You have deleted your account successfully!",
+                    });
+                  }
+                }
+              );
+            }
+          }
+        );
+      } else {
+        res.render("settings.ejs", {
+          user: user.firstName,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          message: "Password is incorrect",
+        });
+      }
+    }
+  });
+});
 app.listen("3000", () => {
   console.log("ALL GOOD!");
 });
