@@ -32,6 +32,7 @@ const userSchema = new Schema({
   lastName: String,
   email: String,
   password: String,
+  isPrivate: String,
   publicPosts: [{ post: String }],
   privatePosts: [{ post: String }],
 });
@@ -44,6 +45,7 @@ const postSchema = new Schema({
   firstName: String,
   lastName: String,
   post: String,
+  isPrivate: String,
 });
 
 const Post = mongoose.model("Post", postSchema);
@@ -93,7 +95,7 @@ function checkSignIn(req, res, next) {
 app.get("/", checkSignIn, (req, res) => {
   User.findOne({ email: req.session.user }, (err, user) => {
     if (user) {
-      Post.find({}, (err, posts) => {
+      Post.find({ isPrivate: "public" }, (err, posts) => {
         if (err) {
           console.log(err);
         } else {
@@ -113,11 +115,12 @@ app.get("/settings", checkSignIn, (req, res) => {
       console.log(err);
     } else {
       res.render("settings.ejs", {
-        user: user.firstName,
+        user: user,
         firstName: user.firstName,
         lastName: user.lastName,
         email: user.email,
         message: null,
+        message2: null,
       });
     }
   });
@@ -158,6 +161,7 @@ app.post("/signUp", (req, res) => {
             lastName: req.body.lName,
             email: req.body.email,
             password: hash,
+            isPrivate: "public",
             privatePosts: [],
             publicPosts: [],
           });
@@ -238,19 +242,21 @@ app.post("/changePassword", checkSignIn, (req, res) => {
             });
 
             res.render("settings.ejs", {
-              user: user.firstName,
+              user: user,
               firstName: user.firstName,
               lastName: user.lastName,
               email: user.email,
               message: "Password has been successfully changed!",
+              message2: null,
             });
           } else {
             res.render("settings.ejs", {
-              user: user.firstName,
+              user: user,
               firstName: user.firstName,
               lastName: user.lastName,
               email: user.email,
               message: "Passwords do not match!",
+              message2: null,
             });
           }
         }
@@ -270,19 +276,21 @@ app.post("/saveSettings", checkSignIn, (req, res) => {
       if (err) {
         console.log(err);
         res.render("settings.ejs", {
-          user: user.firstName,
+          user: user,
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
           message: "There was an error please try again.",
+          message2: null,
         });
       } else {
         res.render("settings.ejs", {
-          user: user.firstName,
+          user: user,
           firstName: user.firstName,
           lastName: user.lastName,
           email: user.email,
           message: "Settings have been updated!",
+          message2: null,
         });
       }
     }
@@ -302,25 +310,48 @@ app.post("/post", checkSignIn, (req, res) => {
           console.log(err);
         } else {
           let publicPosts = user.publicPosts;
-          // console.log(user.publicPosts[publicPosts.length - 1]._id);
-          Post.create(
-            {
-              _id: user.publicPosts[publicPosts.length - 1]._id,
-              author: user.email,
-              firstName: user.firstName,
-              lastName: user.lastName,
-              post: req.body.post,
-            },
-            (err) => {
-              if (err) {
-                console.log(err);
-              } else {
-                setTimeout(() => {
-                  res.redirect("/");
-                }, 1000);
+          if (user.isPrivate == "private") {
+            // console.log(user.publicPosts[publicPosts.length - 1]._id);
+            Post.create(
+              {
+                _id: user.publicPosts[publicPosts.length - 1]._id,
+                author: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                post: req.body.post,
+                isPrivate: "private",
+              },
+              (err) => {
+                if (err) {
+                  console.log(err);
+                } else {
+                  setTimeout(() => {
+                    res.redirect("/");
+                  }, 1000);
+                }
               }
-            }
-          );
+            );
+          } else if (user.isPrivate == "public") {
+            Post.create(
+              {
+                _id: user.publicPosts[publicPosts.length - 1]._id,
+                author: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                post: req.body.post,
+                isPrivate: "public",
+              },
+              (err) => {
+                if (err) {
+                  console.log(err);
+                } else {
+                  setTimeout(() => {
+                    res.redirect("/");
+                  }, 1000);
+                }
+              }
+            );
+          }
         }
       }
     );
@@ -441,16 +472,50 @@ app.post("/deleteAccount", checkSignIn, (req, res) => {
             );
           } else {
             res.render("settings.ejs", {
-              user: user.firstName,
+              user: user,
               firstName: user.firstName,
               lastName: user.lastName,
               email: user.email,
               message: "Password is incorrect",
+              message2: null,
             });
           }
         }
       );
     }
   });
+});
+
+app.post("/changePrivacySettings", checkSignIn, (req, res) => {
+  User.findOneAndUpdate(
+    { email: req.session.user },
+    { isPrivate: req.body.privacySetting },
+    { returnOriginal: false },
+    (err, user) => {
+      if (err) {
+        console.log(err);
+      } else {
+        Post.updateMany(
+          { author: req.session.user },
+          { isPrivate: req.body.privacySetting },
+          { returnOriginal: false },
+          (err, posts) => {
+            if (err) {
+              console.log(err);
+            } else {
+              res.render("settings.ejs", {
+                user: user,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                message: null,
+                message2: "Privacy settings have been changed!",
+              });
+            }
+          }
+        );
+      }
+    }
+  );
 });
 app.listen("3000", () => {});

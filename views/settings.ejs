@@ -211,6 +211,56 @@
           </div>
         </div>
       </div>
+
+      <div class="border border-primary p-4 mt-3">
+        <h5 class="text-primary">Privacy Settings</h5>
+        <form action="/changePrivacySettings" method="POST">
+          <div class="mt-3 mb-3">
+            <p class="d-inline">Account:</p>
+
+            <%if (user.isPrivate == "private") {%>
+            <select
+              name="privacySetting"
+              id="privacySetting"
+              onfocus="showPrivacySettingsSave()"
+              onblur="hidePrivacySettingsSave()"
+            >
+              <option value="public">Public</option>
+              <option value="private" selected>Private</option>
+            </select>
+
+            <p class="text-secondary mt-3">
+              Public: Other users can see your posts on their feed
+            </p>
+            <p class="text-secondary">
+              Private: Only your friends can see your posts
+            </p>
+            <%} else if (user.isPrivate == "public") {%>
+            <select
+              name="privacySetting"
+              id="privacySetting"
+              onfocus="showPrivacySettingsSave()"
+              onblur="hidePrivacySettingsSave()"
+            >
+              <option value="public" selected>Public</option>
+              <option value="private">Private</option>
+            </select>
+
+            <p class="text-secondary mt-3">
+              Public: Other users can see your posts on their feed
+            </p>
+            <p class="text-secondary">
+              Private: Only your friends can see your posts
+            </p>
+            <%}%>
+          </div>
+
+          <div class="text-right d-none mt-3" id="saveButtonDiv2">
+            <button class="btn btn-primary" type="submit">Save</button>
+          </div>
+          <p class="mt-3"><%=message2%></p>
+        </form>
+      </div>
     </div>
 
     <%- include('footer'); %>
