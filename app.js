@@ -170,7 +170,7 @@ app.post("/signUp", (req, res) => {
                             privatePosts: [],
                             publicPosts: [],
                         });
-                        alert(user.email);
+                      
                         user.save();
                         req.session.user = user.email;
                         res.redirect("/");
