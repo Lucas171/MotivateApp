@@ -153,7 +153,8 @@ app.get("*", checkSignIn, function (req, res) {
 // SignUp
 app.post("/signUp", (req, res) => {
     // Look for the user
-    User.findOne({ email: req.body.email.toLowerCase() }, (err, user) => {
+    let email = req.body.email.toLowerCase()
+    User.findOne({ email: email }, (err, user) => {
         if (user == null) {
             if (req.body.password == req.body.repassword) {
                 bcrypt.hash(
@@ -163,7 +164,7 @@ app.post("/signUp", (req, res) => {
                         const user = new User({
                             firstName: req.body.fName,
                             lastName: req.body.lName,
-                            email: req.body.email.toLowerCase(),
+                            email: email,
                             password: hash,
                             isPrivate: "public",
                             privatePosts: [],
